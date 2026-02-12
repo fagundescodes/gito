@@ -25,7 +25,16 @@ func main() {
 		switch os.Args[2] {
 		case "init":
 			gitInit.Parse(os.Args[3:])
-			fmt.Println("Initialized empty Gito repository")
+			if err := os.Mkdir(".gito", 0o755); err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			wd, err := os.Getwd()
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			fmt.Printf("Initialized empty Gito repository in %s/.gito\n", wd)
 		default:
 			fmt.Printf("Unknown subcommand %s\n", os.Args[2])
 			os.Exit(1)
