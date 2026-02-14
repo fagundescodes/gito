@@ -10,6 +10,8 @@ import (
 
 func main() {
 	gitHashObject := flag.NewFlagSet("hash-object", flag.ExitOnError)
+	gitCatFile := flag.NewFlagSet("cat-file", flag.ExitOnError)
+
 	gitCmd := flag.NewFlagSet("gito", flag.ExitOnError)
 	gitInit := flag.NewFlagSet("init", flag.ExitOnError)
 
@@ -54,6 +56,16 @@ func main() {
 				os.Exit(1)
 			}
 			fmt.Println(oid)
+		case "cat-file":
+			gitCatFile.Parse(os.Args[3:])
+			if gitCatFile.NArg() < 1 {
+				fmt.Println("Expected an object")
+				os.Exit(1)
+			}
+			if err := catFile(gitCatFile.Arg(0)); err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 
 		default:
 			fmt.Printf("Unknown subcommand %s\n", os.Args[2])
@@ -78,4 +90,13 @@ func hashObject(path string) (string, error) {
 		return "", err
 	}
 	return oid, nil
+}
+
+func catFile(oid string) error {
+	data, err := os.ReadFile(".gito/objects/" + oid)
+	if err != nil {
+		return err
+	}
+	fmt.Print(string(data))
+	return nil
 }
