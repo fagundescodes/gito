@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"flag"
@@ -50,11 +51,19 @@ func main() {
 				fmt.Println("expected a file")
 				os.Exit(1)
 			}
-			oid, err := hashObject(gitHashObject.Arg(0))
+
+			data, err := os.ReadFile(gitHashObject.Arg(0))
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
+
+			oid, err := hashObject(data, "blob")
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
 			fmt.Println(oid)
 		case "cat-file":
 			gitCatFile.Parse(os.Args[3:])
@@ -79,24 +88,31 @@ func main() {
 	}
 }
 
-func hashObject(path string) (string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	sum := sha1.Sum(data)
+func hashObject(data []byte, objectType string) (string, error) {
+	obj := append([]byte(objectType), 0)
+	obj = append(obj, data...)
+
+	sum := sha1.Sum(obj)
 	oid := hex.EncodeToString(sum[:])
-	if err := os.WriteFile(".gito/objects/"+oid, data, 0o644); err != nil {
+
+	if err := os.WriteFile(".gito/objects/"+oid, obj, 0o644); err != nil {
 		return "", err
 	}
+
 	return oid, nil
 }
 
 func catFile(oid string) error {
-	data, err := os.ReadFile(".gito/objects/" + oid)
+	obj, err := os.ReadFile(".gito/objects/" + oid)
 	if err != nil {
 		return err
 	}
-	fmt.Print(string(data))
+
+	_, after, ok := bytes.Cut(obj, []byte{0})
+	if !ok {
+		return fmt.Errorf("invalid object format")
+	}
+
+	fmt.Print(string(after))
 	return nil
 }
