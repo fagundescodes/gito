@@ -1,12 +1,11 @@
 package main
 
 import (
-	"bytes"
-	"crypto/sha1"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"os"
+
+	"github.com/fagundescodes/gito/internal/data"
 )
 
 func main() {
@@ -31,15 +30,7 @@ func main() {
 		switch os.Args[2] {
 		case "init":
 			gitInit.Parse(os.Args[3:])
-			if err := os.Mkdir(".gito", 0o755); err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-			if err := os.Mkdir(".gito/objects", 0o755); err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-			wd, err := os.Getwd()
+			wd, err := data.Init()
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -52,13 +43,13 @@ func main() {
 				os.Exit(1)
 			}
 
-			data, err := os.ReadFile(gitHashObject.Arg(0))
+			content, err := os.ReadFile(gitHashObject.Arg(0))
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
 
-			oid, err := hashObject(data, "blob")
+			oid, err := data.HashObject(content, "blob")
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -71,11 +62,12 @@ func main() {
 				fmt.Println("Expected an object")
 				os.Exit(1)
 			}
-			if err := catFile(gitCatFile.Arg(0)); err != nil {
+			content, err := data.GetObject(gitCatFile.Arg(0))
+			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
-
+			fmt.Print(string(content))
 		default:
 			fmt.Printf("Unknown subcommand %s\n", os.Args[2])
 			os.Exit(1)
@@ -83,36 +75,7 @@ func main() {
 
 		gitCmd.Parse(os.Args[2:])
 	default:
-		fmt.Printf("Unknown command %s\n", os.Args[2])
+		fmt.Printf("Unknown command %s\n", os.Args[1])
 		os.Exit(1)
 	}
-}
-
-func hashObject(data []byte, objectType string) (string, error) {
-	obj := append([]byte(objectType), 0)
-	obj = append(obj, data...)
-
-	sum := sha1.Sum(obj)
-	oid := hex.EncodeToString(sum[:])
-
-	if err := os.WriteFile(".gito/objects/"+oid, obj, 0o644); err != nil {
-		return "", err
-	}
-
-	return oid, nil
-}
-
-func catFile(oid string) error {
-	obj, err := os.ReadFile(".gito/objects/" + oid)
-	if err != nil {
-		return err
-	}
-
-	_, after, ok := bytes.Cut(obj, []byte{0})
-	if !ok {
-		return fmt.Errorf("invalid object format")
-	}
-
-	fmt.Print(string(after))
-	return nil
 }
