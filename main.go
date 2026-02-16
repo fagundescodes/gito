@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fagundescodes/gito/internal/base"
 	"github.com/fagundescodes/gito/internal/data"
 )
 
 func main() {
 	gitHashObject := flag.NewFlagSet("hash-object", flag.ExitOnError)
 	gitCatFile := flag.NewFlagSet("cat-file", flag.ExitOnError)
+	gitWriteTree := flag.NewFlagSet("write-tree", flag.ExitOnError)
 
 	gitCmd := flag.NewFlagSet("gito", flag.ExitOnError)
 	gitInit := flag.NewFlagSet("init", flag.ExitOnError)
@@ -68,6 +70,12 @@ func main() {
 				os.Exit(1)
 			}
 			fmt.Print(string(content))
+		case "write-tree":
+			gitWriteTree.Parse(os.Args[3:])
+			if err := base.WriteTree("."); err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 		default:
 			fmt.Printf("Unknown subcommand %s\n", os.Args[2])
 			os.Exit(1)
